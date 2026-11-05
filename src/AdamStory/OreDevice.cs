@@ -30,7 +30,7 @@ namespace AlienStory
             item.name = "亞當的礦石產生器";
             item.shortDescription = Description;
             item.SetSpriteAndShapeFromMod(ModId, "ore_device");
-            item.SetShape(new GridShapeBuilder().SetDataFill(3, 4, 1).Build());
+            item.SetShape(new GridShapeBuilder().SetDataFill(4, 3, 1).Build());
             item.activateDefault = true;
             item.mayActivateSlotItemFunc = (self, inventory, slot) => true;
             item.canActivateSlotItemFunc = (self, inventory, slot) => true;
@@ -49,7 +49,7 @@ namespace AlienStory
                     var texture = source.texture;
                     int grid = UISettings.current != null ? Math.Max(1, UISettings.current.gridSize) : 16;
                     // Unity UI uses sprite pixels-per-unit relative to a 100 PPU canvas.
-                    float ppu = 100f * texture.width / (3f * grid);
+                    float ppu = 100f * texture.width / (4f * grid);
                     scaledIcon = Sprite.Create(texture, new Rect(0, 0, texture.width, texture.height), new Vector2(.5f, .5f), ppu);
                 }
                 mod.Sprites["ore_device"] = scaledIcon;
@@ -77,16 +77,16 @@ namespace AlienStory
         private static void TryExpand(GameItem item)
         {
             if (item.parentInventory is GameGridInventory grid && item.shape != null &&
-                (item.shape.width != 3 || item.shape.height != 4) && item.modifiedShape != null &&
+                (item.shape.width != 4 || item.shape.height != 3) && item.modifiedShape != null &&
                 item.modifiedXOrigin == 0 && item.modifiedYOrigin == 0 &&
                 item.modifiedShape.orientation == 0 && !item.modifiedShape.flipped)
             {
-                var enlarged = new GridShapeBuilder().SetDataFill(3, 4, 1)
+                var enlarged = new GridShapeBuilder().SetDataFill(4, 3, 1)
                     .SetTransform(item.modifiedShape).Build();
                 if (grid.CheckInventorySlotStillValid(item, enlarged, item.modifiedState))
                 {
-                    item.SetShape(new GridShapeBuilder().SetDataFill(3, 4, 1).Build());
-                    Debug.Log("[Adam ore device] Expanded saved item to 3x4 in final inventory.");
+                    item.SetShape(new GridShapeBuilder().SetDataFill(4, 3, 1).Build());
+                    Debug.Log("[Adam ore device] Expanded saved item to 4x3 in final inventory.");
                 }
                 else Debug.Log("[Adam ore device] Expansion deferred: final inventory placement is unavailable.");
             }
@@ -105,8 +105,8 @@ namespace AlienStory
                 text.AddLine("蓄能狀態：已完成，可啟動");
             else
                 text.AddLine("蓄能狀態：還需 " + (next - StoreStation.GetDayCounter()) + " 天");
-            if (item.shape != null && (item.shape.width != 3 || item.shape.height != 4))
-                text.AddLine("要擴充為 3×4，請將裝置轉回原方向並騰出周圍空間，再重新載入。");
+            if (item.modifiedShape != null && (item.modifiedShape.globalWidth != 4 || item.modifiedShape.globalHeight != 3))
+                text.AddLine("要擴充為橫向 4×3，請將裝置轉回原方向並騰出周圍空間，再重新載入。");
         }
 
         internal static void ScheduleReward()
@@ -164,7 +164,7 @@ namespace AlienStory
     }
 
     // The generated sprite has large transparent margins. Use the visible
-    // image rectangle for hit testing and fit it inside the occupied grid.
+    // image rectangle for hit testing and size it to the occupied grid.
     [HarmonyPatch(typeof(GameItemElement), "ValidateSelectLocked")]
     internal static class OreDeviceHitTargetPatch
     {
@@ -175,14 +175,20 @@ namespace AlienStory
             var image = __instance.background?.image;
             if (image == null || image.sprite == null || image.sprite.texture == null || UISettings.current == null) return;
             image.alphaHitTestMinimumThreshold = 0f;
+            image.type = UnityEngine.UI.Image.Type.Simple;
+            image.preserveAspect = false;
             float grid = Math.Max(1, UISettings.current.gridSize);
-            float w = __instance.modifiedShape.globalWidth * grid;
-            float h = __instance.modifiedShape.globalHeight * grid;
-            float aspect = (float)image.sprite.texture.width / image.sprite.texture.height;
-            if (w / h > aspect) w = h * aspect; else h = w / aspect;
+            // The rotator handles orientation; these are the local dimensions.
+            float w = __instance.modifiedShape.width * grid;
+            float h = __instance.modifiedShape.height * grid;
             image.rectTransform.sizeDelta = new Vector2(w, h);
             var fake = __instance.fakeBackground?.image;
-            if (fake != null) fake.rectTransform.sizeDelta = new Vector2(w, h);
+            if (fake != null)
+            {
+                fake.type = UnityEngine.UI.Image.Type.Simple;
+                fake.preserveAspect = false;
+                fake.rectTransform.sizeDelta = new Vector2(w, h);
+            }
         }
     }
 }

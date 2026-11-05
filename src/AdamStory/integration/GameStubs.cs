@@ -20,7 +20,7 @@ namespace UnityEngine {
     public class GameObject : Object { public UnityEngine.UI.Image Image=new(); public bool Active; public bool activeSelf=>Active; public Transform transform=new(); public T GetComponent<T>() where T:class => Image as T; public void SetActive(bool active)=>Active=active; }
     public static class Debug { public static void Log(object x) { } public static void LogError(object x) { } public static void LogWarning(object x) { } }
 }
-namespace UnityEngine.UI { public class Image { public enum Type { Simple } public Type type; public UnityEngine.Sprite sprite; public UnityEngine.Color color; public bool preserveAspect; public float alphaHitTestMinimumThreshold=0.00001f; public UnityEngine.RectTransform rectTransform=new(); } }
+namespace UnityEngine.UI { public class Image { public enum Type { Simple, Tiled } public Type type; public UnityEngine.Sprite sprite; public UnityEngine.Color color; public bool preserveAspect; public float alphaHitTestMinimumThreshold=0.00001f; public UnityEngine.RectTransform rectTransform=new(); } }
 public interface IMod { void Init(ModManifest m); void OnEnable(); void OnDisable(); }
 public class ModManifest { public string ID; }
 public class LoadedMod { public bool IsEnabled; public ModManifest Manifest; public Dictionary<string,UnityEngine.Sprite> Sprites = new(); }
@@ -114,14 +114,14 @@ public class GameInventory {
     public SlotMarker TryFindOneValidInventorySlot(GameItem i)=>transferLimit>0 && slotsLeft>0 ? new SlotMarker{numTransfer=transferLimit,item=i,inventory=this} : null;
 }
 public class GameGridInventory : GameInventory {
-    public bool Fits=true; public int Width=10,Height=10;
+    public bool Fits=true,ParentsFit=true; public int Width=10,Height=10; public GridShape inventoryShape=>new(){width=Width,height=Height};
     public bool CheckInventorySlotStillValid(GameItem item,GridShape shape,object state) {
-        if(!Fits || shape.minX<0 || shape.minY<0 || shape.minX+shape.width>Width || shape.minY+shape.height>Height) return false;
+        if(!Fits || !ParentsFit || shape.minX<0 || shape.minY<0 || shape.minX+shape.width>Width || shape.minY+shape.height>Height) return false;
         return childItems.Where(x=>x!=item && x.modifiedShape!=null).All(x=>shape.minX+shape.width<=x.modifiedShape.minX || x.modifiedShape.minX+x.modifiedShape.width<=shape.minX || shape.minY+shape.height<=x.modifiedShape.minY || x.modifiedShape.minY+x.modifiedShape.height<=shape.minY);
     }
 }
 public class SlotMarker {
-    public int numTransfer; public GameItem item,targetItem; public GameInventory inventory;
+    public int numTransfer; public GameItem item,targetItem; public GameInventory inventory; public GridShape itemGridShape;
     public int TryAcceptOnce(int n){int count=Math.Min(n,numTransfer);if(count<=0)return 0;item.unitCount=count;item.parentInventory=inventory;inventory.childItems.Add(item);inventory.slotsLeft--;return count;}
 }
 public class EmporiumEntry {
