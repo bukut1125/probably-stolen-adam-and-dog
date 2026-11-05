@@ -13,13 +13,14 @@ namespace UnityEngine {
     public struct Color { public float r,g,b,a; public Color(float r,float g,float b,float a){this.r=r;this.g=g;this.b=b;this.a=a;} public static Color white=>new(1,1,1,1); }
     public class Texture2D : Object { public int width = 100, height = 100; }
     public struct Rect { public Rect(float a,float b,float c,float d) { } }
-    public struct Vector2 { public Vector2(float a,float b) { } }
+    public struct Vector2 { public float x,y; public Vector2(float a,float b) { x=a;y=b; } }
+    public class RectTransform { public Vector2 sizeDelta; }
     public class Sprite : Object { public Texture2D texture = new(); public float Ppu; public static Sprite Create(Texture2D t, Rect r, Vector2 v, float p) => new() { texture = t, Ppu=p }; }
     public class Transform : Object { public GameObject gameObject; public Transform Find(string name)=>null; }
     public class GameObject : Object { public UnityEngine.UI.Image Image=new(); public bool Active; public bool activeSelf=>Active; public Transform transform=new(); public T GetComponent<T>() where T:class => Image as T; public void SetActive(bool active)=>Active=active; }
     public static class Debug { public static void LogError(object x) { } public static void LogWarning(object x) { } }
 }
-namespace UnityEngine.UI { public class Image { public enum Type { Simple } public Type type; public UnityEngine.Sprite sprite; public UnityEngine.Color color; public bool preserveAspect; } }
+namespace UnityEngine.UI { public class Image { public enum Type { Simple } public Type type; public UnityEngine.Sprite sprite; public UnityEngine.Color color; public bool preserveAspect; public float alphaHitTestMinimumThreshold=0.00001f; public UnityEngine.RectTransform rectTransform=new(); } }
 public interface IMod { void Init(ModManifest m); void OnEnable(); void OnDisable(); }
 public class ModManifest { public string ID; }
 public class LoadedMod { public bool IsEnabled; public ModManifest Manifest; public Dictionary<string,UnityEngine.Sprite> Sprites = new(); }
@@ -32,6 +33,8 @@ public class SpriteDict {
 public static class ModHook {
     public static event Action<StoreClientManager> OnGenerateCustomerVeryLate;
     public static event Action<ModItemDirectory> OnModItemDirectoryInit;
+    public static event Action<RichTextBuilder,GameItem> OnCreateTooltipLate;
+    public static void Tooltip(RichTextBuilder b,GameItem i)=>OnCreateTooltipLate?.Invoke(b,i);
     public static event Action OnWakingUpLate, OnGameLoadedLate;
     public static void Queue(StoreClientManager m) => OnGenerateCustomerVeryLate?.Invoke(m);
     public static void Items(ModItemDirectory m) => OnModItemDirectoryInit?.Invoke(m);
@@ -89,26 +92,34 @@ public class PlayerStore {
     public void AcceptBarter(){currentClientInstance.client.isBusinessComplete=true; EmporiumEntry.Instance.backInvinvElement.childItems.Clear();}
     public void ExecuteGameOver(string id){NativeEndCalls++;LastEnding=id;GameOverUIManager.Instance.SetEnding(id);GameOverUIManager.Instance.DisplayUI("rent","fallback",false);}
 }
+public class RichTextBuilder { public List<string> lines=new(); public RichTextBuilder AddLine(string text){lines.Add(text);return this;} }
 public class GameItem {
-    public string identifier,name,shortDescription; public bool activateDefault,Owned; public int unitCount=1; public GameInventory parentInventory; public GridShape shape;
+    public string identifier,name,shortDescription; public bool activateDefault,Owned; public int unitCount=1; public GameInventory parentInventory; public GridShape shape,modifiedShape; public int modifiedXOrigin,modifiedYOrigin; public object modifiedState; public Action<GameItem> onLoaded;
+    public Dictionary<string,int> visibleTags; public HashSet<string> visibleEnabled;
     public Dictionary<string,int> tags = new(); public HashSet<string> enabledTags = new(), types = new(); public int purity;
     public Func<GameItem,GameInventory,SlotMarker,bool> mayActivateSlotItemFunc,canActivateSlotItemFunc;
     public Action<GameItem,GameInventory,SlotMarker> onActivateSlotItemFunc;
-    public bool IsTag(string k)=>enabledTags.Contains(k); public TagState GetTagReadonly(string k)=>new(this,k);
-    public GameItem ModifyTag(string k,Action<TagState> a,bool b){a(new(this,k));return this;}
+    public bool IsTag(string k)=>(visibleEnabled ?? enabledTags).Contains(k); public TagState GetTagReadonly(string k)=>new(this,k,true);
+    public GameItem ModifyTag(string k,Action<TagState> a,bool skipValidate){if(skipValidate && visibleTags==null){visibleTags=new(tags);visibleEnabled=new(enabledTags);} a(new(this,k,false)); if(!skipValidate){visibleTags=null;visibleEnabled=null;} return this;}
     public bool IsGameItemType(string s)=>types.Contains(s);
     public GameItem SetSpriteAndShapeFromMod(string a,string b)=>this;
-    public GameItem SetShape(GridShape a){shape=a;return this;}
+    public GameItem SetShape(GridShape a){shape=a;modifiedShape=a;return this;}
     public GameItem SetStack(int n){unitCount=n;return this;}
 }
-public class TagState { private readonly GameItem item; private readonly string key; public TagState(GameItem i,string k){item=i;key=k;} public int GetInt()=>item.tags.GetValueOrDefault(key); public TagState Enable(){item.enabledTags.Add(key);return this;} public TagState SetInt(int v){item.tags[key]=v;return this;} }
+public class TagState { private readonly GameItem item; private readonly string key; private readonly bool readOnly; public TagState(GameItem i,string k,bool r=false){item=i;key=k;readOnly=r;} public int GetInt()=>(readOnly ? item.visibleTags ?? item.tags : item.tags).GetValueOrDefault(key); public TagState Enable(){item.enabledTags.Add(key);return this;} public TagState SetInt(int v){item.tags[key]=v;return this;} }
 public static class FoodItemHelper { public const string CALORIE_VALUE_TAG="CALORIE_VALUE_TAG"; }
 public static class WaterHelper { public const string LIQUID_CONTAINER_TAG="LIQUID_CONTAINER_TAG"; public static int GetWaterPurity(GameItem i)=>i.purity; }
 public class GameInventory {
     public List<GameItem> childItems = new(); public int transferLimit=100, slotsLeft=100;
     public SlotMarker TryFindOneValidInventorySlot(GameItem i)=>transferLimit>0 && slotsLeft>0 ? new SlotMarker{numTransfer=transferLimit,item=i,inventory=this} : null;
 }
-public class GameGridInventory : GameInventory { }
+public class GameGridInventory : GameInventory {
+    public bool Fits=true; public int Width=10,Height=10;
+    public bool CheckInventorySlotStillValid(GameItem item,GridShape shape,object state) {
+        if(!Fits || shape.minX<0 || shape.minY<0 || shape.minX+shape.width>Width || shape.minY+shape.height>Height) return false;
+        return childItems.Where(x=>x!=item && x.modifiedShape!=null).All(x=>shape.minX+shape.width<=x.modifiedShape.minX || x.modifiedShape.minX+x.modifiedShape.width<=shape.minX || shape.minY+shape.height<=x.modifiedShape.minY || x.modifiedShape.minY+x.modifiedShape.height<=shape.minY);
+    }
+}
 public class SlotMarker {
     public int numTransfer; public GameItem item,targetItem; public GameInventory inventory;
     public int TryAcceptOnce(int n){int count=Math.Min(n,numTransfer);if(count<=0)return 0;item.unitCount=count;item.parentInventory=inventory;inventory.childItems.Add(item);inventory.slotsLeft--;return count;}
@@ -117,9 +128,11 @@ public class EmporiumEntry {
     public static EmporiumEntry Instance = new(); public GameGridInventory invElement = new(), backInvinvElement = new();
     public List<GameItem> GetOwnedItemsBack()=>backInvinvElement.childItems.Where(x=>x.Owned).ToList();
 }
-public class GridShape { public int width,height; public byte fill; }
-public class GridShapeBuilder { private GridShape shape=new(); public GridShapeBuilder SetDataFill(int w,int h,byte v){shape.width=w;shape.height=h;shape.fill=v;return this;} public GridShape Build()=>shape; }
-public static class ItemDirectory { public static GameItem CreateEmptyItem(string id)=>new(){identifier=id}; }
+public class GridShape { public int width,height,orientation,minX,minY; public bool flipped; public int globalWidth=>width; public int globalHeight=>height; public byte fill; }
+public class GridShapeBuilder { private GridShape shape=new(); public GridShapeBuilder SetDataFill(int w,int h,byte v){shape.width=w;shape.height=h;shape.fill=v;return this;} public GridShapeBuilder SetTransform(GridShape old){shape.orientation=old.orientation;shape.flipped=old.flipped;shape.minX=old.minX;shape.minY=old.minY;return this;} public GridShape Build()=>shape; }
+public class TreeNodeRender { public UnityEngine.UI.Image image=new(); }
+public class GameItemElement : GameItem { public TreeNodeRender background=new(), fakeBackground=new(); }
+public static class ItemDirectory { public static GameItem CreateEmptyItem(string id)=>new GameItemElement(){identifier=id}; }
 public class ModItemDirectory { public bool Add(string id,Func<GameItem> f)=>DirectoryMaster.factories.TryAdd(id,f); }
 public static class DirectoryMaster {
     public static Dictionary<string,Func<GameItem>> factories=new();

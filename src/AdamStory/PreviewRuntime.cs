@@ -41,6 +41,7 @@ namespace AlienStory
             Register(StoryRuntime.AdamId, StoryRuntime.MakeAdam);
             Register(StoryRuntime.GodId, StoryRuntime.MakeGod);
             ModHook.OnModItemDirectoryInit += OreDevice.Register;
+            ModHook.OnCreateTooltipLate += OreDevice.AddTooltip;
             ModHook.OnGenerateCustomerVeryLate += QueuePreviews;
             ModHook.OnWakingUpLate += FinishPreviewAfterSave;
             ModHook.OnWakingUpLate += StoryRuntime.OnWake;
@@ -53,6 +54,7 @@ namespace AlienStory
             ModHook.OnWakingUpLate -= FinishPreviewAfterSave;
             ModHook.OnWakingUpLate -= StoryRuntime.OnWake;
             ModHook.OnModItemDirectoryInit -= OreDevice.Register;
+            ModHook.OnCreateTooltipLate -= OreDevice.AddTooltip;
             ModHook.OnGameLoadedLate -= StoryRuntime.OnLoaded;
             foreach (var pair in registered)
                 if (StoreClientListDict.storeClientDict.TryGetValue(pair.Key, out var factory) && factory == pair.Value)
