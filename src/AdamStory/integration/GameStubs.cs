@@ -18,7 +18,7 @@ namespace UnityEngine {
     public class Sprite : Object { public Texture2D texture = new(); public float Ppu; public static Sprite Create(Texture2D t, Rect r, Vector2 v, float p) => new() { texture = t, Ppu=p }; }
     public class Transform : Object { public GameObject gameObject; public Transform Find(string name)=>null; }
     public class GameObject : Object { public UnityEngine.UI.Image Image=new(); public bool Active; public bool activeSelf=>Active; public Transform transform=new(); public T GetComponent<T>() where T:class => Image as T; public void SetActive(bool active)=>Active=active; }
-    public static class Debug { public static void LogError(object x) { } public static void LogWarning(object x) { } }
+    public static class Debug { public static void Log(object x) { } public static void LogError(object x) { } public static void LogWarning(object x) { } }
 }
 namespace UnityEngine.UI { public class Image { public enum Type { Simple } public Type type; public UnityEngine.Sprite sprite; public UnityEngine.Color color; public bool preserveAspect; public float alphaHitTestMinimumThreshold=0.00001f; public UnityEngine.RectTransform rectTransform=new(); } }
 public interface IMod { void Init(ModManifest m); void OnEnable(); void OnDisable(); }
@@ -127,6 +127,7 @@ public class SlotMarker {
 public class EmporiumEntry {
     public static EmporiumEntry Instance = new(); public GameGridInventory invElement = new(), backInvinvElement = new();
     public List<GameItem> GetOwnedItemsBack()=>backInvinvElement.childItems.Where(x=>x.Owned).ToList();
+    public List<GameItem> GetAllItems()=>invElement.childItems.Concat(backInvinvElement.childItems).ToList();
 }
 public class GridShape { public int width,height,orientation,minX,minY; public bool flipped; public int globalWidth=>width; public int globalHeight=>height; public byte fill; }
 public class GridShapeBuilder { private GridShape shape=new(); public GridShapeBuilder SetDataFill(int w,int h,byte v){shape.width=w;shape.height=h;shape.fill=v;return this;} public GridShapeBuilder SetTransform(GridShape old){shape.orientation=old.orientation;shape.flipped=old.flipped;shape.minX=old.minX;shape.minY=old.minY;return this;} public GridShape Build()=>shape; }

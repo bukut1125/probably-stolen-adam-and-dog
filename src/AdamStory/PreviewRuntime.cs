@@ -46,6 +46,7 @@ namespace AlienStory
             ModHook.OnWakingUpLate += FinishPreviewAfterSave;
             ModHook.OnWakingUpLate += StoryRuntime.OnWake;
             ModHook.OnGameLoadedLate += StoryRuntime.OnLoaded;
+            ModHook.OnGameLoadedLate += OreDevice.MigrateSavedItems;
         }
 
         public void OnDisable()
@@ -56,6 +57,7 @@ namespace AlienStory
             ModHook.OnModItemDirectoryInit -= OreDevice.Register;
             ModHook.OnCreateTooltipLate -= OreDevice.AddTooltip;
             ModHook.OnGameLoadedLate -= StoryRuntime.OnLoaded;
+            ModHook.OnGameLoadedLate -= OreDevice.MigrateSavedItems;
             foreach (var pair in registered)
                 if (StoreClientListDict.storeClientDict.TryGetValue(pair.Key, out var factory) && factory == pair.Value)
                     StoreClientListDict.storeClientDict.Remove(pair.Key);

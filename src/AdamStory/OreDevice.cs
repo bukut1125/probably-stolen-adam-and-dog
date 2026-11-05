@@ -62,6 +62,20 @@ namespace AlienStory
         private static void RestoreSavedItem(GameItem item)
         {
             item.shortDescription = Description;
+        }
+
+        // The per-item load callback runs inside a temporary decoded container.
+        // Resize only after the game has transferred all saved items to their
+        // final inventories, so that bounds and neighboring items are real.
+        internal static void MigrateSavedItems()
+        {
+            if (EmporiumEntry.Instance == null) return;
+            foreach (var item in EmporiumEntry.Instance.GetAllItems())
+                if (item != null && item.identifier == Id) TryExpand(item);
+        }
+
+        private static void TryExpand(GameItem item)
+        {
             if (item.parentInventory is GameGridInventory grid && item.shape != null &&
                 (item.shape.width != 3 || item.shape.height != 4) && item.modifiedShape != null &&
                 item.modifiedXOrigin == 0 && item.modifiedYOrigin == 0 &&
@@ -70,7 +84,11 @@ namespace AlienStory
                 var enlarged = new GridShapeBuilder().SetDataFill(3, 4, 1)
                     .SetTransform(item.modifiedShape).Build();
                 if (grid.CheckInventorySlotStillValid(item, enlarged, item.modifiedState))
+                {
                     item.SetShape(new GridShapeBuilder().SetDataFill(3, 4, 1).Build());
+                    Debug.Log("[Adam ore device] Expanded saved item to 3x4 in final inventory.");
+                }
+                else Debug.Log("[Adam ore device] Expansion deferred: final inventory placement is unavailable.");
             }
         }
 
