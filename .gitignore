@@ -1,0 +1,9 @@
+**/bin/
+**/obj/
+.assettools/
+local-test/
+staging-mods/
+rollback/
+*.es3
+Player.log
+/dist/ProbablyStolen-AdamAndDog-test.zip

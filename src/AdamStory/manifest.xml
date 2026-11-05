@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Mod>
+  <ID>personal.adam-story</ID>
+  <Name>亞當：墜落與歸途</Name>
+  <Author>Personal</Author>
+  <ModVersion>1.0.0</ModVersion>
+  <Description>第 23 天起展開亞當與外星之神的分支故事。正式結局使用遊戲原生結束與結算流程。</Description>
+  <Prerequisites><Mod>personal.dog-customer</Mod></Prerequisites>
+  <Assemblies><Assembly>AlienStoryMod.dll</Assembly></Assemblies>
+  <Capabilities />
+</Mod>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Mod>
+  <ID>personal.dog-customer</ID>
+  <Name>狗狗顧客</Name>
+  <Author>Personal</Author>
+  <ModVersion>0.1.1</ModVersion>
+  <Description>新增一位偶爾來買食物的狗狗顧客。</Description>
+  <Assemblies><Assembly>DogCustomer.dll</Assembly></Assemblies>
+  <Capabilities />
+</Mod>
