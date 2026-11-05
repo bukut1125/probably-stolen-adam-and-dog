@@ -94,7 +94,7 @@ public class PlayerStore {
 }
 public class RichTextBuilder { public List<string> lines=new(); public RichTextBuilder AddLine(string text){lines.Add(text);return this;} }
 public class GameItem {
-    public string identifier,name,shortDescription; public bool activateDefault,Owned; public int unitCount=1; public GameInventory parentInventory; public GridShape shape,modifiedShape; public int modifiedXOrigin,modifiedYOrigin; public object modifiedState; public Action<GameItem> onLoaded;
+    public string identifier,name,shortDescription,spritePath; public bool activateDefault,Owned; public int unitCount=1; public GameInventory parentInventory; public GridShape shape,modifiedShape; public int modifiedXOrigin,modifiedYOrigin; public object modifiedState; public Action<GameItem> onLoaded;
     public Dictionary<string,int> visibleTags; public HashSet<string> visibleEnabled;
     public Dictionary<string,int> tags = new(); public HashSet<string> enabledTags = new(), types = new(); public int purity;
     public Func<GameItem,GameInventory,SlotMarker,bool> mayActivateSlotItemFunc,canActivateSlotItemFunc;
@@ -102,8 +102,9 @@ public class GameItem {
     public bool IsTag(string k)=>(visibleEnabled ?? enabledTags).Contains(k); public TagState GetTagReadonly(string k)=>new(this,k,true);
     public GameItem ModifyTag(string k,Action<TagState> a,bool skipValidate){if(skipValidate && visibleTags==null){visibleTags=new(tags);visibleEnabled=new(enabledTags);} a(new(this,k,false)); if(!skipValidate){visibleTags=null;visibleEnabled=null;} return this;}
     public bool IsGameItemType(string s)=>types.Contains(s);
-    public GameItem SetSpriteAndShapeFromMod(string a,string b)=>this;
-    public GameItem SetShape(GridShape a){shape=a;modifiedShape=a;return this;}
+    public GameItem SetSpriteAndShapeFromMod(string a,string b){spritePath=b;return this;}
+    public GameItem SetSprite(string a,string b){spritePath=b;return this;}
+    public GameItem SetShape(GridShape a){if(modifiedShape!=null){a.minX=modifiedShape.minX;a.minY=modifiedShape.minY;a.orientation=modifiedShape.orientation;a.flipped=modifiedShape.flipped;}shape=a;modifiedShape=a;return this;}
     public GameItem SetStack(int n){unitCount=n;return this;}
 }
 public class TagState { private readonly GameItem item; private readonly string key; private readonly bool readOnly; public TagState(GameItem i,string k,bool r=false){item=i;key=k;readOnly=r;} public int GetInt()=>(readOnly ? item.visibleTags ?? item.tags : item.tags).GetValueOrDefault(key); public TagState Enable(){item.enabledTags.Add(key);return this;} public TagState SetInt(int v){item.tags[key]=v;return this;} }
@@ -129,8 +130,8 @@ public class EmporiumEntry {
     public List<GameItem> GetOwnedItemsBack()=>backInvinvElement.childItems.Where(x=>x.Owned).ToList();
     public List<GameItem> GetAllItems()=>invElement.childItems.Concat(backInvinvElement.childItems).ToList();
 }
-public class GridShape { public int width,height,orientation,minX,minY; public bool flipped; public int globalWidth=>width; public int globalHeight=>height; public byte fill; }
-public class GridShapeBuilder { private GridShape shape=new(); public GridShapeBuilder SetDataFill(int w,int h,byte v){shape.width=w;shape.height=h;shape.fill=v;return this;} public GridShapeBuilder SetTransform(GridShape old){shape.orientation=old.orientation;shape.flipped=old.flipped;shape.minX=old.minX;shape.minY=old.minY;return this;} public GridShape Build()=>shape; }
+public class GridShape { public int width,height,orientation,minX,minY; public bool flipped; public int globalWidth=>orientation%2==0?width:height; public int globalHeight=>orientation%2==0?height:width; public byte fill; }
+public class GridShapeBuilder { private GridShape shape=new(); public GridShapeBuilder(){} public GridShapeBuilder(GridShape o){shape=new(){width=o.width,height=o.height,minX=o.minX,minY=o.minY,orientation=o.orientation,flipped=o.flipped,fill=o.fill};} public GridShapeBuilder SetTransform(int x,int y,bool flip,int rotation){shape.minX=x;shape.minY=y;shape.flipped=flip;shape.orientation=rotation;return this;} public GridShapeBuilder SetDataFill(int w,int h,byte v){shape.width=w;shape.height=h;shape.fill=v;return this;} public GridShapeBuilder SetTransform(GridShape old){shape.orientation=old.orientation;shape.flipped=old.flipped;shape.minX=old.minX;shape.minY=old.minY;return this;} public GridShape Build()=>shape; }
 public class TreeNodeRender { public UnityEngine.UI.Image image=new(); }
 public class GameItemElement : GameItem { public TreeNodeRender background=new(), fakeBackground=new(); }
 public static class ItemDirectory { public static GameItem CreateEmptyItem(string id)=>new GameItemElement(){identifier=id}; }

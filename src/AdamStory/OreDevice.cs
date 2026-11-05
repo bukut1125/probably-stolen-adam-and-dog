@@ -29,7 +29,7 @@ namespace AlienStory
             var item = ItemDirectory.CreateEmptyItem(Id);
             item.name = "亞當的礦石產生器";
             item.shortDescription = Description;
-            item.SetSpriteAndShapeFromMod(ModId, "ore_device");
+            item.SetSpriteAndShapeFromMod(ModId, "ore_device_horizontal");
             item.SetShape(new GridShapeBuilder().SetDataFill(4, 3, 1).Build());
             item.activateDefault = true;
             item.mayActivateSlotItemFunc = (self, inventory, slot) => true;
@@ -43,7 +43,7 @@ namespace AlienStory
         {
             foreach (var mod in ModLoader.Mods)
             {
-                if (!mod.IsEnabled || mod.Manifest.ID != ModId || !mod.Sprites.TryGetValue("ore_device", out var source) || source == null || source.texture == null) continue;
+                if (!mod.IsEnabled || mod.Manifest.ID != ModId || !mod.Sprites.TryGetValue("ore_device_horizontal", out var source) || source == null || source.texture == null) continue;
                 if (scaledIcon == null || scaledIcon.texture != source.texture)
                 {
                     var texture = source.texture;
@@ -52,7 +52,7 @@ namespace AlienStory
                     float ppu = 100f * texture.width / (4f * grid);
                     scaledIcon = Sprite.Create(texture, new Rect(0, 0, texture.width, texture.height), new Vector2(.5f, .5f), ppu);
                 }
-                mod.Sprites["ore_device"] = scaledIcon;
+                mod.Sprites["ore_device_horizontal"] = scaledIcon;
                 return;
             }
         }
@@ -62,6 +62,7 @@ namespace AlienStory
         private static void RestoreSavedItem(GameItem item)
         {
             item.shortDescription = Description;
+            item.SetSprite(ModId, "ore_device_horizontal");
         }
 
         // The per-item load callback runs inside a temporary decoded container.
@@ -71,25 +72,38 @@ namespace AlienStory
         {
             if (EmporiumEntry.Instance == null) return;
             foreach (var item in EmporiumEntry.Instance.GetAllItems())
-                if (item != null && item.identifier == Id) TryExpand(item);
+            {
+                if (item == null || item.identifier != Id || item.shape == null || item.modifiedShape == null) continue;
+                Debug.Log("[Adam ore device] Loaded shape=" + item.shape.width + "x" + item.shape.height +
+                    ", footprint=" + item.modifiedShape.globalWidth + "x" + item.modifiedShape.globalHeight +
+                    ", rotation=" + item.modifiedShape.orientation + ".");
+                TryExpand(item);
+            }
         }
 
         private static void TryExpand(GameItem item)
         {
-            if (item.parentInventory is GameGridInventory grid && item.shape != null &&
-                (item.shape.width != 4 || item.shape.height != 3) && item.modifiedShape != null &&
-                item.modifiedXOrigin == 0 && item.modifiedYOrigin == 0 &&
-                item.modifiedShape.orientation == 0 && !item.modifiedShape.flipped)
+            if (!(item.parentInventory is GameGridInventory grid) || item.shape == null || item.modifiedShape == null ||
+                (item.shape.width == 4 && item.shape.height == 3) || item.modifiedXOrigin != 0 || item.modifiedYOrigin != 0)
+                return;
+            var old = item.modifiedShape;
+            bool upright = old.orientation == 0 && !old.flipped;
+            // A legacy 3x4 item rotated by a quarter turn already occupies 4x3.
+            // Normalize its base shape and rotation without changing its cells.
+            bool rotatedLegacy = item.shape.width == 3 && item.shape.height == 4 &&
+                old.globalWidth == 4 && old.globalHeight == 3 && !old.flipped;
+            if (!upright && !rotatedLegacy) return;
+            var enlarged = new GridShapeBuilder().SetDataFill(4, 3, 1)
+                .SetTransform(old.minX, old.minY, false, 0).Build();
+            if (!grid.CheckInventorySlotStillValid(item, enlarged, item.modifiedState))
             {
-                var enlarged = new GridShapeBuilder().SetDataFill(4, 3, 1)
-                    .SetTransform(item.modifiedShape).Build();
-                if (grid.CheckInventorySlotStillValid(item, enlarged, item.modifiedState))
-                {
-                    item.SetShape(new GridShapeBuilder().SetDataFill(4, 3, 1).Build());
-                    Debug.Log("[Adam ore device] Expanded saved item to 4x3 in final inventory.");
-                }
-                else Debug.Log("[Adam ore device] Expansion deferred: final inventory placement is unavailable.");
+                Debug.Log("[Adam ore device] Expansion deferred: final inventory placement is unavailable.");
+                return;
             }
+            if (rotatedLegacy)
+                item.modifiedShape = new GridShapeBuilder(old).SetTransform(old.minX, old.minY, false, 0).Build();
+            item.SetShape(new GridShapeBuilder().SetDataFill(4, 3, 1).Build());
+            Debug.Log("[Adam ore device] Normalized saved item to horizontal 4x3 in final inventory.");
         }
 
         internal static void AddTooltip(RichTextBuilder text, GameItem item)
@@ -105,8 +119,6 @@ namespace AlienStory
                 text.AddLine("蓄能狀態：已完成，可啟動");
             else
                 text.AddLine("蓄能狀態：還需 " + (next - StoreStation.GetDayCounter()) + " 天");
-            if (item.modifiedShape != null && (item.modifiedShape.globalWidth != 4 || item.modifiedShape.globalHeight != 3))
-                text.AddLine("要擴充為橫向 4×3，請將裝置轉回原方向並騰出周圍空間，再重新載入。");
         }
 
         internal static void ScheduleReward()
