@@ -5,5 +5,6 @@
 - Event timing is deterministic per run and in-game day; identical saved runs must not reroll on reload. Contamination already collected remains after the tap recovers.
 - Represent toxic material using the native zyanide liquid plus a namespaced visual marker, so volume, toxicity and filtering remain recognized even if the mod is disabled. Preserve markers across fluid transfer.
 - FX must not block pointer input, must align to the glass chamber of the native faucet1 sprite, and disappear after the event; preserve other visual state.
+- Project leak news only into the native newspaper while the event is active; preserve all original visible stories, including overflow through page controls, and keep preview visual-only.
 - Validate timing, source isolation, capacity, mixtures, filtering and reload with focused tests. Distinguish stub simulations, actual game loading, visual acceptance and live toxic effects.
 - Do not put personal game saves or game binaries in a public release. Keep rollback sources before installation.

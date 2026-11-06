@@ -3,7 +3,7 @@
   <ID>personal.plasma-sewer</ID>
   <Name>下水道：等離子外洩</Name>
   <Author>Personal</Author>
-  <ModVersion>1.0.3</ModVersion>
+  <ModVersion>1.1.0</ModVersion>
   <Description>下水道接水偶爾發生等離子外洩：數天內流出劇毒污水，並伴隨像素風特效。</Description>
   <Assemblies><Assembly>PlasmaSewerMod.dll</Assembly></Assemblies>
   <Capabilities />

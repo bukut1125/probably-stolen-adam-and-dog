@@ -5,8 +5,9 @@ namespace HarmonyLib {
     [AttributeUsage(AttributeTargets.Class)] public sealed class HarmonyPatch:Attribute { public HarmonyPatch(Type t,string n){} }
     [AttributeUsage(AttributeTargets.Method)] public sealed class HarmonyPrefix:Attribute { }
     [AttributeUsage(AttributeTargets.Method)] public sealed class HarmonyPostfix:Attribute { }
+    [AttributeUsage(AttributeTargets.Method)] public sealed class HarmonyFinalizer:Attribute { }
 }
-namespace UnityEngine { public class Object { } }
+namespace UnityEngine { public class Object { } public class GameObject { public bool activeSelf; } public static class Debug { public static void LogWarning(object x){} } }
 public interface IMod { void Init(ModManifest m); void OnEnable(); void OnDisable(); }
 public class ModManifest { }
 public class TagState { public int val; public int GetInt()=>val; public TagState SetInt(int value){val=value;return this;} }
@@ -49,7 +50,20 @@ public static class ModHook {
     public static void ConfigChanged(string id)=>OnModConfigApplied?.Invoke(id); public static void Upgrade(string id)=>OnNetworkUpgradeUnlocked?.Invoke(id);
     public static void Tooltip(RichTextBuilder b,GameItem i)=>OnCreateTooltipLate?.Invoke(b,i);
 }
+public class StoreEvent {
+    public enum EventType { NORMALE, THREAT, COSMETIC, INNATE } public enum EventArea { UPPER, LOWER, ALL }
+    public string identifier,newsName,displayName,newsDescription; public EventType eventType; public EventArea eventArea; public int duration; public bool isPermanent,isHiddenFromNewsPaper;
+}
+public class StoreEventManager { public List<StoreEvent> GetActiveEvents()=>new(); }
+public class NewsUIManager { public UnityEngine.GameObject uiGameObject=new(); public void PopulateUI(){} public void ToggleUI(){} }
 public class StoreUIManager { public static StoreUIManager Instance=new(); public int Count; public void Notify(string a,string b){Count++;} }
 public class RichTextBuilder { public List<string> Lines=new(); public RichTextBuilder AddLine(string text, bool ignoreEmpty=true,RenderHandler.ColorPalette color=RenderHandler.ColorPalette.None){Lines.Add(text);return this;} }
 public static class RenderHandler { public enum ColorPalette { None,Red } }
-namespace PlasmaSewer { internal static class PlasmaVisual { public static bool Visible; internal static void SetVisible(bool v){Visible=v;} internal static void Hide(){Visible=false;} } }
+namespace PlasmaSewer {
+ internal static class PlasmaVisual { public static bool Visible; internal static void SetVisible(bool v){Visible=v;} internal static void Hide(){Visible=false;} }
+ internal static class NewsPager {
+  public static int PageIndex {get; private set;} public static int PageCount=1; public static bool Allow=true,Projected; public static int RefreshCalls;
+  public static void ResetPage(){PageIndex=0;} public static void BeginPopulate(){Projected=false;PageCount=1;} public static void SetProjection(int selected,int count){PageIndex=selected;PageCount=count;Projected=true;}
+  public static bool TryEnsure(NewsUIManager manager)=>Allow && manager!=null; public static void Refresh(NewsUIManager manager){RefreshCalls++;} public static void Destroy(){}
+ }
+}

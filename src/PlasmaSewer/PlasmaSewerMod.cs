@@ -35,6 +35,7 @@ namespace PlasmaSewer
             ModHook.OnNetworkUpgradeUnlocked -= OnUpgrade;
             ModHook.OnCreateTooltipLate -= AddTooltip;
             PlasmaVisual.Hide();
+            NewsPager.Destroy();
         }
         internal static bool HasSewerTap => PlayerStore.Instance != null && PlayerStore.Instance.networkUpgrade != null && (NetworkUpgrade.IsUnlocked("GUTTERFLOW_TAP") || NetworkUpgrade.IsUnlocked("RUSTWATER_TAP"));
         internal static bool Active

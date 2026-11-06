@@ -24,5 +24,14 @@ $start=Method 'PlayerStore' 'LoadGame'
 if(-not (Has $start 'FireOnGameLoadedLate')){throw 'Load event changed'}
 $liquid=$a.MainModule.Types | Where-Object Name -eq 'Liquid'
 if(-not @($liquid.Fields | Where-Object Name -eq 'LIQUID_ZYANIDE')){throw 'Native toxin unavailable'}
+$news=Method 'NewsUIManager' 'PopulateUI'
+if(-not (Has $news 'StoreEventManager::GetActiveEvents') -or -not (Has $news 'SelectLayout') -or -not (Has $news 'NewsUIElement::PopulateUI')){throw 'Native newspaper population changed'}
+$events=Method 'StoreEventManager' 'GetActiveEvents'
+if(-not (Has $events 'List`1<StoreEvent>::.ctor')){throw 'Active events no longer returns a copied list'}
+$ui=[Mono.Cecil.AssemblyDefinition]::ReadAssembly((Join-Path $managed 'UnityEngine.UI.dll'))
+$stencil=$ui.MainModule.Types | Where-Object FullName -eq 'UnityEngine.UI.StencilMaterial'
+$add=$stencil.Methods | Where-Object {$_.Name -eq 'Add' -and $_.Parameters.Count -eq 7}
+if(-not $add -or -not (Has $add 'UNITY_UI_ALPHACLIP')){throw 'UI mask alpha clipping contract changed'}
+$ui.Dispose()
 $a.Dispose()
-Write-Output 'PASS: native source-target, faucet upgrade branch, chemistry, coloring and load contracts in installed build.'
+Write-Output 'PASS: native source-target, faucet upgrade branch, chemistry, coloring, newspaper, mask and load contracts in installed build.'

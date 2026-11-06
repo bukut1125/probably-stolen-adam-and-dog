@@ -20,5 +20,19 @@ try {
         }
     }}
     if($found -lt 100 -or ($inside/$found) -lt .98){throw "Overlay misses glass pixels: $inside of $found"}
-    Write-Output "PASS: overlay covers $inside of $found detected water-colored pixels in the real faucet sprite."
+    $policyAssembly=Join-Path $PSScriptRoot 'bin\newspaper-qa\PlasmaTests.dll'
+    if(-not (Test-Path -LiteralPath $policyAssembly)){throw 'Build the newspaper-qa test suite before the visual contract.'}
+    $assembly=[Reflection.Assembly]::LoadFrom($policyAssembly)
+    $policy=$assembly.GetType('PlasmaSewer.PipeMaskPolicy',$true).GetMethod('IsWater',[Reflection.BindingFlags]'Static,NonPublic')
+    $water=0;$metal=0
+    for($y=0;$y -lt $im.Height;$y++) {for($x=0;$x -lt $im.Width;$x++) {
+        $c=$im.GetPixel($x,$y)
+        $selected=[bool]$policy.Invoke($null,@($x,$y,$c.R,$c.G,$c.B,$c.A))
+        if($selected) {
+            $water++
+            if(($y -ge 24 -and $y -le 33 -and (($x -ge 47 -and $x -le 56) -or ($x -ge 84 -and $x -le 93))) -or $y -ge 34 -or $y -lt 14 -or $x -lt 27 -or $x -ge 120){$metal++}
+        }
+    }}
+    if($water -lt 1200 -or $metal -ne 0){throw "Mask classification invalid: water=$water metal=$metal"}
+    Write-Output "PASS: real faucet sprite coverage $inside/$found; $water masked water pixels, $metal cap/brace/highlight pixels."
 } finally {$im.Dispose()}
