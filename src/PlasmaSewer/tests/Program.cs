@@ -8,6 +8,9 @@ static (MethodInfo prefix,MethodInfo postfix) Patch() { var p=typeof(PlasmaSewer
 static object Begin(MethodInfo prefix,GameItem item,GameItem target){object[] args={item,target,null};prefix.Invoke(null,args);return args[2];}
 static void Finish(MethodInfo postfix,GameItem item,object state)=>postfix.Invoke(null,new[]{(object)item,state});
 
+Check(PipeFxLayout.SupportsTexture(1774,887) && !PipeFxLayout.SupportsTexture(160,80),"effect crop only accepts its intended image");
+Check(PipeFxLayout.CropX>=0 && PipeFxLayout.CropY>=0 && PipeFxLayout.CropX+PipeFxLayout.CropWidth<=PipeFxLayout.TextureWidth && PipeFxLayout.CropY+PipeFxLayout.CropHeight<=PipeFxLayout.TextureHeight,"effect crop fits source image");
+Check(PipeFxLayout.MinX==27f/160f && PipeFxLayout.MaxX==120f/160f && PipeFxLayout.MinY==44f/80f && PipeFxLayout.MaxY==75f/80f,"overlay anchors stay inside faucet water chamber");
 int eventCount=0,lastEnd=0;
 for(int d=1;d<=3000;d++){
     var w=EventPolicy.ForDay("save-A",d);

@@ -7,11 +7,24 @@ namespace PlasmaSewer
     internal static class PlasmaVisual
     {
         private static GameObject effect;
+        private static Sprite croppedEffect;
         private static Sprite FindSprite()
         {
             foreach (var mod in ModLoader.Mods)
-                if (mod.IsEnabled && mod.Manifest.ID == PlasmaSewerMod.ModId && mod.Sprites.TryGetValue("plasma_leak_fx", out var sprite))
-                    return sprite;
+                if (mod.IsEnabled && mod.Manifest.ID == PlasmaSewerMod.ModId && mod.Sprites.TryGetValue("plasma_pipe_fx", out var sprite) && sprite != null && sprite.texture != null)
+                {
+                    var texture = sprite.texture;
+                    if (!PipeFxLayout.SupportsTexture(texture.width, texture.height)) return null;
+                    if (croppedEffect == null || croppedEffect.texture != texture)
+                    {
+                        if (croppedEffect != null) UnityEngine.Object.Destroy(croppedEffect);
+                        texture.filterMode = FilterMode.Point;
+                        croppedEffect = Sprite.Create(texture,
+                            new Rect(PipeFxLayout.CropX, PipeFxLayout.CropY, PipeFxLayout.CropWidth, PipeFxLayout.CropHeight),
+                            new Vector2(.5f, .5f), 100f);
+                    }
+                    return croppedEffect;
+                }
             return null;
         }
         internal static void SetVisible(bool visible)
@@ -26,15 +39,15 @@ namespace PlasmaSewer
                 effect = new GameObject("personal.plasma-sewer.effect", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
                 var rect = (RectTransform)effect.transform;
                 rect.SetParent(faucet.background.transform, false);
-                rect.anchorMin = rect.anchorMax = new Vector2(.5f, .25f);
+                rect.anchorMin = new Vector2(PipeFxLayout.MinX, PipeFxLayout.MinY);
+                rect.anchorMax = new Vector2(PipeFxLayout.MaxX, PipeFxLayout.MaxY);
                 rect.pivot = new Vector2(.5f, .5f);
-                float grid = Math.Max(1, UISettings.current.gridSize);
-                rect.sizeDelta = new Vector2(grid * 3.0f, grid * 2.25f);
-                rect.anchoredPosition = new Vector2(0f, -grid * .3f);
+                rect.offsetMin = Vector2.zero;
+                rect.offsetMax = Vector2.zero;
                 var image = effect.GetComponent<Image>();
                 image.sprite = sprite;
                 image.type = Image.Type.Simple;
-                image.preserveAspect = true;
+                image.preserveAspect = false;
                 image.raycastTarget = false;
                 effect.AddComponent<PlasmaPulse>();
             }
